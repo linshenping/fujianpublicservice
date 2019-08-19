@@ -16,6 +16,7 @@ class XiamenPublicServiceTest(unittest.TestCase):
         self.url = "https://open.fjylbz.gov.cn/api/gafe/rest?zyregion=350200"
         self.url_area = 'https://ylbz.ixm.gov.cn/xmyb/api/gafe/rest'
 
+
     def test_personal_information(self):
         print '##########个人基本信息用例执行############'
         date = {
@@ -82,13 +83,54 @@ class XiamenPublicServiceTest(unittest.TestCase):
                     }
                 }
         headers = {"Content-Type": "application/json"}
-        r = requests.post(url=self.url, json=date, headers=headers)
+        r = requests.post(url=self.url_area, json=date, headers=headers)
         print r.text
         flags = json.loads(r.text).get('flag')
         print 'flags:{0}'.format(flags)
         print(r.status_code, r.reason)
         self.assertEqual(flags, u'1')
         self.assertEqual(r.status_code, 200)
+
+    def test_insurance_information_idcard_null(self):
+        print '##########参保信息，身份证号为空用例执行############'
+        date = {
+            "funid": "N07.08.03.01",
+            "data": {
+                "idcard": " ",
+                    }
+                }
+        headers = {"Content-Type": "application/json"}
+        r = requests.post(url=self.url_area, json=date, headers=headers)
+        print r.text
+        flags = json.loads(r.text).get('flag')
+        print 'flags:{0}'.format(flags)
+        cause = json.loads(r.text).get('cause')
+        print 'cause: {0}'.format(cause)
+        print(r.status_code, r.reason)
+        self.assertEqual(flags, u'100509')
+        self.assertIn(cause, '身份证不能为空')
+        self.assertEqual(r.status_code, 200)
+
+    def test_insurance_information_idcard_error(self):
+        print '##########参保信息，身份证号是错误的用例执行############'
+        date = {
+            "funid": "N07.08.03.01",
+            "data": {
+                "idcard": "12346788",
+                    }
+                }
+        headers = {"Content-Type": "application/json"}
+        r = requests.post(url=self.url_area, json=date, headers=headers)
+        print r.text
+        flags = json.loads(r.text).get('flag')
+        print 'flags:{0}'.format(flags)
+        cause = json.loads(r.text).get('cause')
+        print 'cause: {0}'.format(cause)
+        print(r.status_code, r.reason)
+        self.assertEqual(flags, u'100531')
+        self.assertIn(cause, '您没有在厦门参加医保保险或没有停保')
+        self.assertEqual(r.status_code, 200)
+
 
     def test_get_insurance_information(self):
         print '##########获取参保号用例执行############'
@@ -103,10 +145,56 @@ class XiamenPublicServiceTest(unittest.TestCase):
         print r.text
         flags = json.loads(r.text).get('flag')
         print 'flags:{0}'.format(flags)
+        data = json.loads(r.text.encode('utf-8')).get('data')
+        print 'data: {0}'.format(data)
+        id0000 = data['id0000']
+        print '保险号: {}'.format(id0000)
         print(r.status_code, r.reason)
         self.assertEqual(flags, u'1')
+        self.assertIsNotNone(id0000)
         self.assertEqual(r.status_code, 200)
 
+    def test_get_insurance_information_idcard_null(self):
+        print '##########获取参保号,身份证号为空用例执行############'
+        date = {
+            "funid": "N07.08.03.02",
+            "data": {
+                "idcard": ""
+                    }
+                }
+        headers = {"Content-Type": "application/json"}
+        r = requests.post(url=self.url_area, json=date, headers=headers)
+        print r.text
+        flags = json.loads(r.text).get('flag')
+        print 'flags:{0}'.format(flags)
+        data = json.loads(r.text.encode('utf-8')).get('data')
+        print(r.status_code, r.reason)
+        cause = json.loads(r.text).get('cause')
+        print 'cause: {0}'.format(cause)
+        self.assertEqual(flags, u'100509')
+        self.assertIn(cause, '身份证不能为空')
+        self.assertEqual(r.status_code, 200)
+
+    def test_get_insurance_information_idcard_error(self):
+        print '##########获取参保号，身份证号错误用例执行############'
+        date = {
+            "funid": "N07.08.03.02",
+            "data": {
+                "idcard": "1234567"
+                    }
+                }
+        headers = {"Content-Type": "application/json"}
+        r = requests.post(url=self.url_area, json=date, headers=headers)
+        print r.text
+        flags = json.loads(r.text).get('flag')
+        print 'flags:{0}'.format(flags)
+        data = json.loads(r.text.encode('utf-8')).get('data')
+        print(r.status_code, r.reason)
+        cause = json.loads(r.text).get('cause')
+        print 'cause: {0}'.format(cause)
+        self.assertEqual(flags, u'100531')
+        self.assertIn(cause, '您没有在厦门参加医保保险或没有停保')
+        self.assertEqual(r.status_code, 200)
 
     def test_payment_information(self):
         print '##########缴费查询用例执行############'
@@ -126,7 +214,14 @@ class XiamenPublicServiceTest(unittest.TestCase):
         flags = json.loads(r.text).get('flag')
         print 'flags:{0}'.format(flags)
         print(r.status_code, r.reason)
+        data = json.loads(r.text).get('data')
+        print 'data:{0}'.format(data)
+        total = data['total']
+        rows = data['rows']
+        print 'rows长度: {0}'.format(len(rows))
+        print 'total:{0}'.format(total)
         self.assertEqual(flags, u'1')
+        self.assertEqual(total, len(rows))
         self.assertEqual(r.status_code, 200)
 
     def test_consume_information(self):
@@ -1222,7 +1317,6 @@ class NingdePublicServiceTest(unittest.TestCase):
         print(r.status_code, r.reason)
         self.assertEqual(flags, u'1')
         self.assertEqual(r.status_code, 200)
-
 
 if __name__ == '__main__':
     unittest.main()
